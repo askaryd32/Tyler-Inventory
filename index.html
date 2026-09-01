@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Car Connect with Tyler</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f6f8;
+      color: #1f2937;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 28px 18px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: .9;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 22px 16px 50px;
+    }
+
+    .intro {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 14px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+
+    .filters button {
+      border: 1px solid #bbb;
+      background: white;
+      padding: 10px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .filters button:hover {
+      background: #eeeeee;
+    }
+
+    .inventory {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+
+    .vehicle {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.08);
+    }
+
+    .vehicle h2 {
+      margin-top: 0;
+      font-size: 21px;
+    }
+
+    .price {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 12px 0;
+    }
+
+    .details {
+      line-height: 1.6;
+      color: #555;
+    }
+
+    .cta {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      background: #111827;
+      color: white;
+      padding: 13px;
+      border-radius: 9px;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: #666;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px 15px;
+      font-size: 13px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>The Car Connect with Tyler</h1>
+  <p>Find your next vehicle.</p>
+</header>
+
+<div class="container">
+
+  <div class="intro">
+    <h2>Current Available Inventory</h2>
+    <p>Search available new and pre-owned vehicles below.</p>
+  </div>
+
+  <input
+    id="search"
+    class="search"
+    type="text"
+    placeholder="Search year, make, model or stock number..."
+  >
+
+  <div class="filters">
+    <button onclick="setFilter('all')">All Vehicles</button>
+    <button onclick="setFilter('new')">New</button>
+    <button onclick="setFilter('used')">Pre-Owned</button>
+    <button onclick="setFilter('under19000')">Under $19,000</button>
+  </div>
+
+  <div id="inventory" class="inventory">
+    <div class="empty">Loading current inventory...</div>
+  </div>
+
+</div>
+
+<footer>
+  Inventory and pricing are subject to change and availability.
+  Contact Tyler to confirm current vehicle availability.
+</footer>
+
+<script>
+  let vehicles = [];
+  let activeFilter = "all";
+
+  fetch("inventory.json")
+    .then(response => response.json())
+    .then(data => {
+      vehicles = data;
+      displayVehicles();
+    })
+    .catch(() => {
+      document.getElementById("inventory").innerHTML =
+        '<div class="empty">Inventory is being updated. Please check back shortly.</div>';
+    });
+
+  function setFilter(filter) {
+    activeFilter = filter;
+    displayVehicles();
+  }
+
+  document.getElementById("search").addEventListener("input", displayVehicles);
+
+  function displayVehicles() {
+    const search =
+      document.getElementById("search").value.toLowerCase();
+
+    const filtered = vehicles.filter(vehicle => {
+
+      const searchable =
+        `${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim || ""} ${vehicle.stock || ""}`
+        .toLowerCase();
+
+      const matchesSearch = searchable.includes(search);
+
+      let matchesFilter = true;
+
+      if (activeFilter === "new") {
+        matchesFilter = vehicle.condition === "New";
+      }
+
+      if (activeFilter === "used") {
+        matchesFilter = vehicle.condition === "Used";
+      }
+
+      if (activeFilter === "under19000") {
+        matchesFilter = Number(vehicle.price) < 19000;
+      }
+
+      return matchesSearch && matchesFilter;
+    });
+
+    const inventory = document.getElementById("inventory");
+
+    if (!filtered.length) {
+      inventory.innerHTML =
+        '<div class="empty">No matching vehicles found. Tyler can still help you find one.</div>';
+      return;
+    }
+
+    inventory.innerHTML = filtered.map(vehicle => {
+
+      const title =
+        `${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim || ""}`;
+
+      const price =
+        vehicle.price
+          ? "$" + Number(vehicle.price).toLocaleString()
+          : "Contact for price";
+
+      const mileage =
+        vehicle.mileage
+          ? Number(vehicle.mileage).toLocaleString() + " miles"
+          : "New Vehicle";
+
+      return `
+        <div class="vehicle">
+
+          <h2>${title}</h2>
+
+          <div class="price">${price}</div>
+
+          <div class="details">
+            ${mileage}<br>
+            Stock #: ${vehicle.stock || "N/A"}
+          </div>
+
+          <a
+            class="cta"
+            href="${vehicle.contact || '#'}"
+          >
+            Ask Tyler About This Vehicle
+          </a>
+
+        </div>
+      `;
+
+    }).join("");
+  }
+</script>
+
+</body>
+</html>
