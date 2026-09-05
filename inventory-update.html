@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Tyler Inventory Update</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      color: #1f2937;
+    }
+
+    .wrap {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .notice {
+      background: #eef6ff;
+      border: 1px solid #bcdcff;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background: white;
+      margin-bottom: 16px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      padding: 15px;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin-top: 18px;
+      font-weight: bold;
+    }
+
+    #output {
+      margin-top: 18px;
+      white-space: pre-wrap;
+      background: #111827;
+      color: #f9fafb;
+      padding: 18px;
+      border-radius: 10px;
+      max-height: 500px;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <div class="card">
+
+    <h1>Tyler Inventory Update</h1>
+
+    <div class="notice">
+      The PDF is processed locally in this browser.
+      The original dealership report is not uploaded to GitHub
+      or published to the inventory website.
+    </div>
+
+    <label>
+      <strong>Select today's vAuto inventory PDF</strong>
+    </label>
+
+    <br><br>
+
+    <input
+      type="file"
+      id="pdfFile"
+      accept="application/pdf"
+    >
+
+    <button id="readButton" disabled>
+      Read Inventory PDF
+    </button>
+
+    <div id="status"></div>
+
+    <div id="output" class="hidden"></div>
+
+  </div>
+
+</div>
+
+<script type="module">
+
+  import * as pdfjsLib
+    from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+
+  const fileInput =
+    document.getElementById("pdfFile");
+
+  const readButton =
+    document.getElementById("readButton");
+
+  const status =
+    document.getElementById("status");
+
+  const output =
+    document.getElementById("output");
+
+  fileInput.addEventListener("change", () => {
+
+    readButton.disabled =
+      !fileInput.files.length;
+
+    status.textContent = "";
+
+    output.textContent = "";
+
+    output.classList.add("hidden");
+
+  });
+
+  readButton.addEventListener("click", async () => {
+
+    const file =
+      fileInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    status.textContent =
+      "Reading inventory PDF...";
+
+    output.classList.add("hidden");
+
+    try {
+
+      const arrayBuffer =
+        await file.arrayBuffer();
+
+      const pdf =
+        await pdfjsLib.getDocument({
+          data: arrayBuffer
+        }).promise;
+
+      let allText = "";
+
+      for (
+        let pageNumber = 1;
+        pageNumber <= pdf.numPages;
+        pageNumber++
+      ) {
+
+        const page =
+          await pdf.getPage(pageNumber);
+
+        const content =
+          await page.getTextContent();
+
+        const pageText =
+          content.items
+            .map(item => item.str)
+            .join(" ");
+
+        allText +=
+          `\n\n===== PAGE ${pageNumber} =====\n\n`;
+
+        allText += pageText;
+
+      }
+
+      status.textContent =
+        `Success — read ${pdf.numPages} pages.`;
+
+      output.textContent = allText;
+
+      output.classList.remove("hidden");
+
+    } catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "Unable to read this PDF.";
+
+    }
+
+  });
+
+</script>
+
+</body>
+</html>
